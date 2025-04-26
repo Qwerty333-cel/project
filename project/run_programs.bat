@@ -28,10 +28,11 @@ echo Choose a program to run in Docker:
 echo 1. Run Django development server
 echo 2. Run Django shell
 echo 3. Run Django tests
-echo 4. Run database filler
-echo 5. Run database eraser
-echo 6. Exit
-set /p choice="Enter your choice (1-6): "
+echo 4. Run API tests
+echo 5. Run database filler
+echo 6. Run database eraser
+echo 7. Exit
+set /p choice="Enter your choice (1-7): "
 
 if "%choice%"=="1" (
     echo Starting Django development server...
@@ -58,6 +59,14 @@ if "%choice%"=="1" (
     )
     goto docker_menu_loop
 ) else if "%choice%"=="4" (
+    echo Running API tests...
+    docker-compose exec web pytest core/test_api.py -v
+    if errorlevel 1 (
+        echo API tests failed!
+        pause
+    )
+    goto docker_menu_loop
+) else if "%choice%"=="5" (
     echo Running database filler...
     docker-compose exec web python core/filler.py
     if errorlevel 1 (
@@ -65,7 +74,7 @@ if "%choice%"=="1" (
         pause
     )
     goto docker_menu_loop
-) else if "%choice%"=="5" (
+) else if "%choice%"=="6" (
     echo Running database eraser...
     docker-compose exec web python core/bd_eraser.py
     if errorlevel 1 (
@@ -73,7 +82,7 @@ if "%choice%"=="1" (
         pause
     )
     goto docker_menu_loop
-) else if "%choice%"=="6" (
+) else if "%choice%"=="7" (
     goto end
 ) else (
     echo Invalid choice!
@@ -115,11 +124,12 @@ echo Choose a program to run in virtual environment:
 echo 1. Run Django development server
 echo 2. Run Django shell
 echo 3. Run Django tests
-echo 4. Run database filler
-echo 5. Run database eraser
-echo 6. Open terminal (continue working in venv)
-echo 7. Exit
-set /p choice="Enter your choice (1-7): "
+echo 4. Run API tests
+echo 5. Run database filler
+echo 6. Run database eraser
+echo 7. Open terminal (continue working in venv)
+echo 8. Exit
+set /p choice="Enter your choice (1-8): "
 
 if "%choice%"=="1" (
     echo Starting Django development server...
@@ -146,6 +156,14 @@ if "%choice%"=="1" (
     )
     goto venv_menu_loop
 ) else if "%choice%"=="4" (
+    echo Running API tests...
+    pytest core/test_api.py -v
+    if errorlevel 1 (
+        echo API tests failed!
+        pause
+    )
+    goto venv_menu_loop
+) else if "%choice%"=="5" (
     echo Running database filler...
     python core/filler.py
     if errorlevel 1 (
@@ -153,7 +171,7 @@ if "%choice%"=="1" (
         pause
     )
     goto venv_menu_loop
-) else if "%choice%"=="5" (
+) else if "%choice%"=="6" (
     echo Running database eraser...
     python core/bd_eraser.py
     if errorlevel 1 (
@@ -161,13 +179,13 @@ if "%choice%"=="1" (
         pause
     )
     goto venv_menu_loop
-) else if "%choice%"=="6" (
+) else if "%choice%"=="7" (
     echo Opening terminal with activated virtual environment...
     echo You can now run any commands in the virtual environment.
     echo Type 'deactivate' to exit the virtual environment.
     cmd /k
     goto venv_menu_loop
-) else if "%choice%"=="7" (
+) else if "%choice%"=="8" (
     goto venv_end
 ) else (
     echo Invalid choice!
@@ -182,3 +200,30 @@ echo Virtual environment deactivated.
 
 :end
 echo Exiting... 
+
+@echo off
+setlocal enabledelayedexpansion
+
+:: Проверка наличия виртуального окружения
+if not exist "venv" (
+    echo Creating virtual environment...
+    python -m venv venv
+)
+
+:: Активация виртуального окружения
+call venv\Scripts\activate.bat
+
+:: Установка зависимостей
+echo Installing dependencies...
+pip install -r requirements.txt
+
+:: Запуск тестов
+echo Running tests...
+pytest core/test_api.py -v
+
+:: Запуск сервера разработки
+echo Starting development server...
+python manage.py runserver
+
+:: Деактивация виртуального окружения
+call venv\Scripts\deactivate.bat 

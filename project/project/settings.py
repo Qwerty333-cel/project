@@ -11,7 +11,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Получаем значения переменных окружения или используем значения по умолчанию
 SECRET_KEY = os.getenv('SECRET_KEY', 'unsafe-secret-dev-key')  # Для безопасности всегда используйте уникальный ключ
 DEBUG = os.getenv("DEBUG", "False") == "True"  # Преобразуем строку в булево значение
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')  # Разделяем строки в список
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
 
 # Приложения Django
 INSTALLED_APPS = [

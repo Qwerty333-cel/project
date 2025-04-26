@@ -38,6 +38,12 @@ class UserManager:
         )
 
     @staticmethod
+    def update_password(user: User, password: str) -> None:
+        """Обновляет пароль пользователя"""
+        user.password_hash = generate_password_hash(password)
+        user.save()
+
+    @staticmethod
     def get_all_users() -> List[User]:
         """Возвращает список всех пользователей"""
         return list(User.objects.all())
