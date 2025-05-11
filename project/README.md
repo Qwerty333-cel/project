@@ -1,6 +1,6 @@
 # Обзор проекта
 
-#### manage.py
+#######manage.py#######
 
 ## Файл manage.py
 
