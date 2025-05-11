@@ -4,7 +4,6 @@ from core.models import (
     User, MealPlans, Meals, Ingredients, MealIngredient,
     DietTypes, Favorites, MealPlanMeal
 )
-from werkzeug.security import generate_password_hash, check_password_hash
 from django.db import transaction
 from typing import Optional, List, Dict, Any
 from datetime import datetime
