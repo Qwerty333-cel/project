@@ -1,18 +1,19 @@
 import os
 import sys
 
-# Добавляем корневую директорию проекта в sys.path
+# Add project root to sys.path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
 import django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'project.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
 from django.db import transaction
+from django.contrib.auth.models import User as DjangoUser
 from core.models import (
     DietTypes, User, MealPlans, Meals, Ingredients, 
-    Favorites, MealPlanMeal, MealIngredient
+    Favorites, MealPlanMeal, MealIngredient, Profile
 )
 
 def clear_database():
@@ -41,6 +42,12 @@ def clear_database():
             
             print("Удаляем пользователей сайта...")
             User.objects.all().delete()
+            
+            print("Удаляем профили...")
+            Profile.objects.all().delete()
+            
+            print("Удаляем пользователей Django...")
+            DjangoUser.objects.all().delete()
             
             print("Удаляем типы диет...")
             DietTypes.objects.all().delete()

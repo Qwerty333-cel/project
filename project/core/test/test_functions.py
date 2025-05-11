@@ -9,7 +9,9 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'project.settings')
 django.setup()
 
-from django.test import TestCase
+from rest_framework.test import APITestCase
+from rest_framework import status
+from rest_framework.authtoken.models import Token
 from core.models import DietTypes, User, MealPlans, Meals, Ingredients, Favorites, MealPlanMeal, MealIngredient
 from core.functions import (
     UserManager, MealPlanManager, MealManager,

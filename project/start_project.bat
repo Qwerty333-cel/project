@@ -28,7 +28,7 @@ if errorlevel 1 (
     echo Docker Desktop is not running. Starting Docker Desktop...
     start "" "C:\Program Files\Docker\Docker\Docker Desktop.exe"
     echo Waiting for Docker to start...
-    timeout /t 20 /nobreak
+    timeout /t 30 
 )
 
 :: Stop any running containers

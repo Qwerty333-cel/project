@@ -6,11 +6,12 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
 import django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'project.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
 from django.db import transaction
 from core.models import DietTypes, User, MealPlans, Meals, Ingredients, Favorites, MealPlanMeal, MealIngredient
+from django.contrib.auth.models import User as DjangoUser
 from werkzeug.security import generate_password_hash
 from faker import Faker
 import random
@@ -30,13 +31,13 @@ def generate_random_date():
 def generate_unique_username():
     while True:
         username = fake.user_name()
-        if not User.objects.filter(username=username).exists():
+        if not DjangoUser.objects.filter(username=username).exists():
             return username
 
 def generate_unique_email():
     while True:
         email = fake.email()
-        if not User.objects.filter(email=email).exists():
+        if not DjangoUser.objects.filter(email=email).exists():
             return email
 
 def generate_unique_password_hash():
@@ -67,22 +68,30 @@ def create_users(diet_types):
         # Generate unique user data
         username = generate_unique_username()
         email = generate_unique_email()
-        password_hash = generate_unique_password_hash()
+        password = fake.password(length=12)
         
         # Generate physical characteristics
         weight = round(random.uniform(45, 120), 1)  # kg
         height = round(random.uniform(150, 200), 1)  # cm
         age = random.randint(18, 80)
         
-        user = User.objects.create(
+        # Create Django user first
+        django_user = DjangoUser.objects.create_user(
             username=username,
-            password_hash=password_hash,
             email=email,
+            password=password
+        )
+        
+        # Create our custom user
+        user = User.objects.create(
+            django_user=django_user,
             weight=weight,
             height=height,
             age=age,
             diet_type=random.choice(diet_types)
         )
+        
+        # Profile will be created automatically by the signal
         users.append(user)
     return users
 

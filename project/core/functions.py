@@ -8,6 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from django.db import transaction
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+from django.contrib.auth.models import User as DjangoUser
 
 # Инициализация Faker
 fake = Faker()
@@ -27,21 +28,30 @@ class UserManager:
         diet_type_id: Optional[int] = None
     ) -> User:
         """Создает нового пользователя"""
-        return User.objects.create(
+        # Create Django user first
+        django_user = DjangoUser.objects.create_user(
             username=username,
-            password_hash=generate_password_hash(password),
-            email=email,
+            password=password,
+            email=email
+        )
+        
+        # Create our custom user
+        user = User.objects.create(
+            django_user=django_user,
             weight=weight,
             height=height,
             age=age,
             diet_type_id=diet_type_id
         )
+        
+        # Profile will be created automatically by the signal
+        return user
 
     @staticmethod
     def update_password(user: User, password: str) -> None:
         """Обновляет пароль пользователя"""
-        user.password_hash = generate_password_hash(password)
-        user.save()
+        user.django_user.set_password(password)
+        user.django_user.save()
 
     @staticmethod
     def get_all_users() -> List[User]:
@@ -65,7 +75,7 @@ class UserManager:
     @staticmethod
     def verify_password(user: User, password: str) -> bool:
         """Проверяет пароль пользователя"""
-        return check_password_hash(user.password_hash, password)
+        return user.django_user.check_password(password)
 
 
 class MealPlanManager:

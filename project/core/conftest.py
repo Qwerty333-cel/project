@@ -1,10 +1,9 @@
 import os
 import django
-import pytest
 from django.conf import settings
 
 # Установка переменной окружения для настроек Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'project.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
 # Инициализация Django
 django.setup()

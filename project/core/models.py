@@ -5,27 +5,43 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 class DietTypes(models.Model):
-    name = models.TextField(null=False)
+    name = models.TextField(null=False, db_index=True)
     description = models.TextField(null=True, blank=True)
     is_restricted = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Diet Type'
+        verbose_name_plural = 'Diet Types'
 
     def __str__(self):
         return self.name
 
 
 class User(models.Model):
-    username = models.CharField(max_length=50, unique=True)
-    password_hash = models.TextField(unique=True)
+    django_user = models.OneToOneField(DjangoUser, on_delete=models.CASCADE, related_name='custom_user')
     weight = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
     height = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
     age = models.PositiveIntegerField(null=True, blank=True)
-    email = models.EmailField(max_length=100, unique=True)
     diet_type = models.ForeignKey(DietTypes, on_delete=models.SET_NULL, null=True, blank=True, related_name="users")
     created_at = models.DateTimeField(default=timezone.now)
 
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'User'
+        verbose_name_plural = 'Users'
+
     def __str__(self):
-        return self.username
+        return self.django_user.username
+
+    @property
+    def email(self):
+        return self.django_user.email
+
+    @property
+    def username(self):
+        return self.django_user.username
 
 
 class Profile(models.Model):

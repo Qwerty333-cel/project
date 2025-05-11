@@ -4,8 +4,10 @@ from .functions import UserManager
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
-    weight = serializers.FloatField(required=False)
-    height = serializers.FloatField(required=False)
+    username = serializers.CharField(required=True)
+    email = serializers.EmailField(required=True)
+    # weight = serializers.FloatField(required=False)
+    # height = serializers.FloatField(required=False)
     
     class Meta:
         model = User
@@ -26,7 +28,11 @@ class UserSerializer(serializers.ModelSerializer):
         if 'password' in validated_data:
             UserManager.update_password(instance, validated_data.pop('password'))
         for attr, value in validated_data.items():
-            setattr(instance, attr, value)
+            if attr in ['username', 'email']:
+                setattr(instance.django_user, attr, value)
+            else:
+                setattr(instance, attr, value)
+        instance.django_user.save()
         instance.save()
         return instance
 

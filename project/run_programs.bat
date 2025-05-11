@@ -31,8 +31,10 @@ echo 3. Run Django tests
 echo 4. Run API tests
 echo 5. Run database filler
 echo 6. Run database eraser
-echo 7. Exit
-set /p choice="Enter your choice (1-7): "
+echo 7. Make migrations
+echo 8. Apply migrations
+echo 9. Exit
+set /p choice="Enter your choice (1-9): "
 
 if "%choice%"=="1" (
     echo Starting Django development server...
@@ -83,6 +85,22 @@ if "%choice%"=="1" (
     )
     goto docker_menu_loop
 ) else if "%choice%"=="7" (
+    echo Making migrations...
+    docker-compose exec web python manage.py makemigrations
+    if errorlevel 1 (
+        echo Failed to make migrations!
+        pause
+    )
+    goto docker_menu_loop
+) else if "%choice%"=="8" (
+    echo Applying migrations...
+    docker-compose exec web python manage.py migrate
+    if errorlevel 1 (
+        echo Failed to apply migrations!
+        pause
+    )
+    goto docker_menu_loop
+) else if "%choice%"=="9" (
     goto end
 ) else (
     echo Invalid choice!
@@ -128,8 +146,10 @@ echo 4. Run API tests
 echo 5. Run database filler
 echo 6. Run database eraser
 echo 7. Open terminal (continue working in venv)
-echo 8. Exit
-set /p choice="Enter your choice (1-8): "
+echo 8. Make migrations
+echo 9. Apply migrations
+echo 10. Exit
+set /p choice="Enter your choice (1-10): "
 
 if "%choice%"=="1" (
     echo Starting Django development server...
@@ -157,7 +177,7 @@ if "%choice%"=="1" (
     goto venv_menu_loop
 ) else if "%choice%"=="4" (
     echo Running API tests...
-    pytest core/test_api.py -v
+    pytest core/test/test_api.py -v
     if errorlevel 1 (
         echo API tests failed!
         pause
@@ -186,6 +206,22 @@ if "%choice%"=="1" (
     cmd /k
     goto venv_menu_loop
 ) else if "%choice%"=="8" (
+    echo Making migrations...
+    python manage.py makemigrations
+    if errorlevel 1 (
+        echo Failed to make migrations!
+        pause
+    )
+    goto venv_menu_loop
+) else if "%choice%"=="9" (
+    echo Applying migrations...
+    python manage.py migrate
+    if errorlevel 1 (
+        echo Failed to apply migrations!
+        pause
+    )
+    goto venv_menu_loop
+) else if "%choice%"=="10" (
     goto venv_end
 ) else (
     echo Invalid choice!
