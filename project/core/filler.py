@@ -1,55 +1,92 @@
 import os
 import sys
-import django
-from django.db import transaction
-from core.models import DietTypes, User, MealPlans, Meals, Ingredients, Favorites, MealPlanMeal, MealIngredient
-from django.contrib.auth.models import User as DjangoUser
-from faker import Faker
-import random
-from datetime import datetime, timedelta
-from django.utils import timezone
+import django # Первичный импорт Django, чтобы потом вызвать setup
+# НЕ импортируем модели Django или вашего приложения здесь
 
-# Add project root to sys.path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, project_root)
+# --- НАЧАЛО БЛОКА НАСТРОЙКИ DJANGO ---
+# Определяем абсолютный путь к директории, содержащей этот скрипт (filler.py)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+# Определяем абсолютный путь к корневой директории вашего Django проекта.
+PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..')) 
 
+# Добавляем корневую директорию проекта в sys.path
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+# Устанавливаем переменную окружения DJANGO_SETTINGS_MODULE
+# ЗАМЕНИТЕ 'config.settings' на ваш актуальный путь к файлу настроек, если он другой.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
-django.setup()
 
-# Initialize Faker with English locale
-Faker.seed(1234)  # Fix seed for reproducibility
-fake = Faker(['en_US'])
+try:
+    django.setup() # Инициализируем Django
+except Exception as e:
+    print(f"Критическая ошибка во время django.setup(): {e}")
+    print(f"Рассчитанный project_root: {PROJECT_ROOT}")
+    print(f"DJANGO_SETTINGS_MODULE: {os.environ.get('DJANGO_SETTINGS_MODULE')}")
+    print("Убедитесь, что filler.py находится в правильном месте (например, your_project_root/core/filler.py) "
+          "и DJANGO_SETTINGS_MODULE указывает на ваш файл настроек.")
+    sys.exit(1)
+# --- КОНЕЦ БЛОКА НАСТРОЙКИ DJANGO ---
 
-def generate_random_date():
-    # Generate timezone-aware date
-    end_date = timezone.now()
-    start_date = end_date - timedelta(days=365)
-    return fake.date_time_between(start_date=start_date, end_date=end_date, tzinfo=timezone.get_current_timezone())
+# ТЕПЕРЬ, ПОСЛЕ django.setup(), МОЖНО БЕЗОПАСНО ИМПОРТИРОВАТЬ ВСЕ ОСТАЛЬНОЕ
+from django.db import transaction
+from django.contrib.auth.models import User as DjangoUser # <--- ПЕРЕНЕСЕНО СЮДА
+from faker import Faker
+from faker_food import FoodProvider 
+import random
+from django.utils import timezone
+from core.models import ( # <--- ПЕРЕНЕСЕНО СЮДА
+    DietTypes, User, MealPlans, Meals, Ingredients, Favorites, 
+    MealPlanMeal, MealIngredient
+)
+
+
+# --- Остальная часть вашего скрипта filler.py (функции и т.д.) ---
+# (Код функций create_diet_types, create_users, populate_database и if __name__ == "__main__":
+#  остается таким же, как в моем предыдущем полном ответе)
+
+
+# Инициализация Faker
+Faker.seed(1234) 
+fake = Faker(['en_US']) 
+fake.add_provider(FoodProvider) 
+
+def generate_random_date_valid_from():
+    """Генерирует случайную дату для поля valid_from (от полугода назад до месяца вперед)."""
+    days_offset = random.randint(-180, 30) 
+    return timezone.now() + timezone.timedelta(days=days_offset)
 
 def generate_unique_username():
+    """Генерирует уникальное имя пользователя, проверяя его отсутствие в DjangoUser."""
     while True:
         username = fake.user_name()
+        if len(username) > 150: 
+            username = username[:150]
         if not DjangoUser.objects.filter(username=username).exists():
             return username
 
 def generate_unique_email():
+    """Генерирует уникальный email, проверяя его отсутствие в DjangoUser."""
     while True:
         email = fake.email()
         if not DjangoUser.objects.filter(email=email).exists():
             return email
 
-def generate_unique_password_hash():
-    while True:
-        password = fake.password(length=12)
-        password_hash = generate_password_hash(password)
-        if not User.objects.filter(password_hash=password_hash).exists():
-            return password_hash
+def create_diet_types(count=7):
+    """Создает указанное количество типов диет с уникальными именами."""
+    diet_types_list = []
+    existing_names = set(DietTypes.objects.values_list('name', flat=True)) 
+    for _ in range(count):
+        name = ""
+        for _i in range(100): 
+            temp_name = fake.word().capitalize() + " Diet" 
+            if temp_name not in existing_names: 
+                name = temp_name
+                break
+        if not name: 
+            name = f"Diet Type {fake.uuid4()[:8]}" 
 
-def create_diet_types():
-    diet_types = []
-    for _ in range(7):  # Generate 7 random diet types
-        name = fake.word().capitalize()
-        description = fake.sentence()
+        description = fake.sentence(nb_words=10)
         is_restricted = fake.boolean()
         
         diet_type = DietTypes.objects.create(
@@ -57,183 +94,238 @@ def create_diet_types():
             description=description,
             is_restricted=is_restricted
         )
-        diet_types.append(diet_type)
-    return diet_types
+        diet_types_list.append(diet_type)
+        existing_names.add(name) 
+    return diet_types_list
 
-def create_users(diet_types):
-    users = []
-    for _ in range(20):
-        # Generate unique user data
+def create_users(diet_types_list, count=20):
+    """Создает указанное количество пользователей (DjangoUser и связанных кастомных User)."""
+    users_list = []
+    
+    for _ in range(count):
         username = generate_unique_username()
         email = generate_unique_email()
-        password = fake.password(length=12)
+        password = fake.password(length=random.randint(10,16), special_chars=True, digits=True, upper_case=True, lower_case=True)
         
-        # Generate physical characteristics
-        weight = round(random.uniform(45, 120), 1)  # kg
-        height = round(random.uniform(150, 200), 1)  # cm
+        weight = round(random.uniform(45.0, 120.0), 1)
+        height = round(random.uniform(150.0, 200.0), 1)
         age = random.randint(18, 80)
         
-        # Create Django user first
-        django_user = DjangoUser.objects.create_user(
+        django_user = DjangoUser.objects.create_user( 
             username=username,
             email=email,
             password=password
         )
         
-        # Create our custom user
-        user = User.objects.create(
+        chosen_diet_type = random.choice(diet_types_list) if diet_types_list else None
+        
+        user = User.objects.create( 
             django_user=django_user,
             weight=weight,
             height=height,
             age=age,
-            diet_type=random.choice(diet_types)
+            diet_type=chosen_diet_type
         )
-        
-        # Profile will be created automatically by the signal
-        users.append(user)
-    return users
+        users_list.append(user)
+    return users_list
 
-def create_meals(diet_types):
-    meals = []
-    for _ in range(30):  # Generate 30 random meals
-        # Generate meal data using Faker
-        name = fake.catch_phrase()
-        description = fake.paragraph(nb_sentences=3)
-        price = round(random.uniform(5, 50), 2)
+def create_meals(diet_types_list, count=30):
+    """Создает указанное количество блюд."""
+    meals_list = []
         
+    for _ in range(count):
+        name = fake.dish()
+        if len(name) > 255: 
+            name = name[:255] 
+        description = fake.dish_description()
+        if len(description) > 500: 
+            description = description[:500]
+        price = round(random.uniform(3.00, 60.00), 2) 
+        
+        chosen_diet_type = random.choice(diet_types_list) if diet_types_list else None
+
         meal = Meals.objects.create(
             name=name,
             description=description,
             price=price,
-            diet_type=random.choice(diet_types)
+            diet_type=chosen_diet_type
         )
-        meals.append(meal)
-    return meals
+        meals_list.append(meal)
+    return meals_list
 
-def create_meal_plans(users, meals):
-    meal_plans = []
-    for _ in range(15):
-        # Generate meal plan data
-        duration = random.randint(7, 30)
-        total_price = round(random.uniform(50, 500), 2)
-        
+def create_meal_plans(users_list, meals_list, count=15):
+    """Создает планы питания и связывает их с блюдами через MealPlanMeal."""
+    meal_plans_list = []
+    if not users_list or not meals_list: 
+        print("Предупреждение: Невозможно создать планы питания без пользователей или блюд.")
+        return meal_plans_list
+
+    for _ in range(count):
+        user_for_plan = random.choice(users_list)
+        duration_days = random.randint(3, 28) 
+        total_plan_price = round(random.uniform(20.0, 600.0), 1) 
+
         meal_plan = MealPlans.objects.create(
-            user=random.choice(users),
-            duration=duration,
-            total_price=total_price
+            user=user_for_plan,
+            duration=duration_days,
+            total_price=total_plan_price 
         )
         
-        # Add random meals to the plan
-        selected_meals = random.sample(meals, k=random.randint(1, 5))
-        meal_plan.meals.add(*selected_meals)
-        meal_plans.append(meal_plan)
-    return meal_plans
+        num_meals_in_plan = 0
+        if meals_list: 
+            num_meals_in_plan = random.randint(1, min(7, len(meals_list))) 
+        
+        if num_meals_in_plan > 0:
+            selected_meals_for_plan = random.sample(meals_list, k=num_meals_in_plan)
+            for meal_item in selected_meals_for_plan:
+                try: 
+                    MealPlanMeal.objects.create(plan=meal_plan, meal=meal_item)
+                except django.db.utils.IntegrityError: 
+                    print(f"Блюдо {meal_item.name} уже в плане {meal_plan.id}. Пропускаем.")
+                except Exception as e:
+                    print(f"Ошибка добавления блюда {meal_item.name} в план {meal_plan.id}: {e}")
+        
+        meal_plans_list.append(meal_plan)
+    return meal_plans_list
 
-def create_favorites(users, meals):
-    # Создаем множество для отслеживания уже созданных пар
-    created_pairs = set()
-    
-    # Пытаемся создать 30 уникальных избранных
+def create_favorites(users_list, meals_list, count=30):
+    """Создает указанное количество записей в избранном, избегая дубликатов."""
+    if not users_list or not meals_list:
+        print("Предупреждение: Невозможно создать избранное без пользователей или блюд.")
+        return
+
+    created_count = 0
     attempts = 0
-    max_attempts = 100  # Максимальное количество попыток
+    max_total_attempts = count * len(users_list) * len(meals_list) if users_list and meals_list else count * 10
     
-    while len(created_pairs) < 30 and attempts < max_attempts:
-        user = random.choice(users)
-        meal = random.choice(meals)
-        pair = (user.id, meal.id)
-        
-        if pair not in created_pairs:
-            try:
-                Favorites.objects.create(
-                    user=user,
-                    meal=meal
-                )
-                created_pairs.add(pair)
-            except Exception as e:
-                print(f"Ошибка при создании избранного: {e}")
-        
+    while created_count < count and attempts < max_total_attempts :
+        user = random.choice(users_list)
+        meal = random.choice(meals_list)
         attempts += 1
-    
-    print(f"Создано {len(created_pairs)} уникальных избранных блюд")
+        
+        try: 
+            _, created = Favorites.objects.get_or_create(user=user, meal=meal)
+            if created:
+                created_count += 1
+        except Exception as e: 
+            print(f"Ошибка создания избранного для Пользователя {user.id}, Блюда {meal.id}: {e}")
+            
+    print(f"Создано {created_count} уникальных записей в избранном.")
 
-def create_ingredients():
-    ingredients = []
-    for _ in range(40):  # Generate 40 random ingredients
-        # Generate ingredient data using Faker
-        name = fake.word().capitalize()
-        price_per_unit = round(random.uniform(1, 20), 2)
-        unit = random.choice(['kg', 'g', 'l', 'ml', 'oz', 'lb'])
-        store_name = fake.company()
-        valid_from = generate_random_date()
+
+def create_ingredients(count=40):
+    """Создает указанное количество ингредиентов."""
+    ingredients_list = []
+    for _ in range(count):
+        base_word = fake.word().capitalize()
+        food_suffix = fake.ingredient()
+        if len(food_suffix) > 50:
+            food_suffix = food_suffix[:50]  
+        name = f"{base_word} {food_suffix}"
+        if len(name) > 255 : name = name[:255] 
+
+        price_per_unit = round(random.uniform(0.20, 25.00), 2)
+        unit = random.choice(['kg', 'g', 'l', 'ml', 'piece', 'tbsp', 'tsp', 'cup', 'oz'])
+        store_name = fake.company() if fake.boolean(chance_of_getting_true=70) else None 
         
         ingredient = Ingredients.objects.create(
             name=name,
             price_per_unit=price_per_unit,
             unit=unit,
             store_name=store_name,
-            valid_from=valid_from
+            valid_from=generate_random_date_valid_from() 
         )
-        ingredients.append(ingredient)
-    return ingredients
+        ingredients_list.append(ingredient)
+    return ingredients_list
 
-def create_meal_ingredients(meals, ingredients):
-    for meal in meals:
-        # Add 3-8 random ingredients to each meal
-        selected_ingredients = random.sample(ingredients, k=random.randint(3, 8))
-        for ingredient in selected_ingredients:
-            # Generate quantity based on ingredient unit
+def create_meal_ingredients(meals_list, ingredients_list):
+    """Связывает блюда с ингредиентами через MealIngredient, указывая количество."""
+    if not meals_list or not ingredients_list:
+        print("Предупреждение: Невозможно создать ингредиенты блюд без блюд или ингредиентов.")
+        return
+
+    for meal in meals_list:
+        if not ingredients_list: continue 
+
+        max_k = min(8, len(ingredients_list)) 
+        min_k = min(1, len(ingredients_list)) 
+        if min_k > max_k : continue 
+        
+        num_ingredients_in_meal = random.randint(min_k, max_k)
+        
+        selected_ingredients_for_meal = random.sample(ingredients_list, k=num_ingredients_in_meal)
+        for ingredient in selected_ingredients_for_meal:
             if ingredient.unit in ['kg', 'l']:
-                quantity = round(random.uniform(0.1, 1.0), 2)
-            else:
-                quantity = round(random.uniform(1, 10), 2)
-                
-            MealIngredient.objects.create(
-                meal=meal,
-                ingredient=ingredient,
-                quantity=quantity
-            )
+                quantity = round(random.uniform(0.05, 0.75), 2) 
+            elif ingredient.unit in ['g', 'ml']:
+                quantity = round(random.uniform(10, 250), 1)
+            elif ingredient.unit == 'piece':
+                quantity = random.randint(1, 5)
+            else: 
+                quantity = round(random.uniform(0.5, 4), 1)
+            
+            try: 
+                MealIngredient.objects.create(
+                    meal=meal,
+                    ingredient=ingredient,
+                    quantity=quantity
+                )
+            except django.db.utils.IntegrityError: 
+                 print(f"Ингредиент {ingredient.name} уже в блюде {meal.name}. Пропускаем.")
+            except Exception as e:
+                print(f"Ошибка добавления ингредиента {ingredient.name} в блюдо {meal.name}: {e}")
 
+@transaction.atomic 
 def populate_database():
-    try:
-        with transaction.atomic():
-            print("Creating diet types...")
-            diet_types = create_diet_types()
-            print(f"Created {len(diet_types)} diet types")
+    """Основная функция для заполнения базы данных тестовыми данными."""
+    print("Запуск процесса заполнения базы данных...")
+    
+    diet_types = create_diet_types(count=6) 
+    print(f"Создано {len(diet_types)} типов диет.")
 
-            print("Creating users...")
-            users = create_users(diet_types)
-            print(f"Created {len(users)} users")
+    users = create_users(diet_types, count=15) 
+    print(f"Создано {len(users)} пользователей.")
 
-            print("Creating meals...")
-            meals = create_meals(diet_types)
-            print(f"Created {len(meals)} meals")
+    meals = create_meals(diet_types, count=40) 
+    print(f"Создано {len(meals)} блюд.")
+    
+    if users and meals: 
+        meal_plans = create_meal_plans(users, meals, count=10)
+        if meal_plans: 
+             print(f"Создано {len(meal_plans)} планов питания.")
+        create_favorites(users, meals, count=25) 
+    else:
+        print("Пропуск создания планов питания и избранного из-за отсутствия пользователей или блюд.")
 
-            print("Creating meal plans...")
-            meal_plans = create_meal_plans(users, meals)
-            print(f"Created {len(meal_plans)} meal plans")
+    ingredients = create_ingredients(count=50) 
+    print(f"Создано {len(ingredients)} ингредиентов.")
 
-            print("Creating favorites...")
-            create_favorites(users, meals)
-            print("Created favorites")
+    if meals and ingredients: 
+        create_meal_ingredients(meals, ingredients)
+        print("Ингредиенты добавлены к блюдам.")
+    else:
+        print("Пропуск добавления ингредиентов к блюдам из-за отсутствия блюд или ингредиентов.")
 
-            print("Creating ingredients...")
-            ingredients = create_ingredients()
-            print(f"Created {len(ingredients)} ingredients")
+    print("\nПроцесс заполнения базы данных завершен.")
+    print(f"Сводка:")
+    print(f"- Типы диет: {DietTypes.objects.count()}")
+    print(f"- Пользователи (Django): {DjangoUser.objects.count()}")
+    print(f"- Пользователи (Кастомные): {User.objects.count()}")
+    print(f"- Блюда: {Meals.objects.count()}")
+    print(f"- Планы питания: {MealPlans.objects.count()}")
+    print(f"- Ингредиенты: {Ingredients.objects.count()}")
+    print(f"- Избранное: {Favorites.objects.count()}")
+    print(f"- Записи MealPlanMeal: {MealPlanMeal.objects.count()}")
+    print(f"- Записи MealIngredient: {MealIngredient.objects.count()}")
 
-            print("Creating meal ingredients...")
-            create_meal_ingredients(meals, ingredients)
-            print("Created meal ingredients")
-
-        print("\nDatabase successfully populated with test data!")
-        print(f"Summary:")
-        print(f"- {len(diet_types)} diet types")
-        print(f"- {len(users)} users")
-        print(f"- {len(meals)} meals")
-        print(f"- {len(meal_plans)} meal plans")
-        print(f"- {len(ingredients)} ingredients")
-    except Exception as e:
-        print(f"\nError while populating database: {e}")
-        raise
 
 if __name__ == "__main__":
-    populate_database()
+    print("Запуск заполнителя базы данных...")
+    try:
+        populate_database()
+        print("\nБаза данных успешно заполнена тестовыми данными!")
+    except Exception as e:
+        print(f"\nОшибка во время заполнения базы данных: {e}")
+        import traceback
+        traceback.print_exc() 
+    print("Скрипт заполнителя базы данных завершил работу.")
