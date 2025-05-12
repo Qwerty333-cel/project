@@ -1,0 +1,1517 @@
+{
+	"info": {
+		"_postman_id": "8c9c646a-c671-468c-be09-97707f872b2d",
+		"name": "API Test Collection",
+		"description": "Postman collection with fixed user data, expecting proper cleanup by the API.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "44611293"
+	},
+	"item": [
+		{
+			"name": "00 - User Setup",
+			"item": [
+				{
+					"name": "Register User (testuser_postman)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"var jsonData = pm.response.json();",
+									"// registeredUserId - это ID вашей кастомной модели User (core.models.User)",
+									"pm.environment.set(\"registeredUserId\", jsonData.id);",
+									"pm.environment.set(\"registeredUsername\", jsonData.username); // Сохраняем имя для логина",
+									"pm.test(\"Username in response matches registered username\", function () {",
+									"    pm.expect(jsonData.username).to.eql(\"testuser_postman\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"testuser_postman\",\n  \"password\": \"testpass123\",\n  \"email\": \"testpostman@example.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login User (testuser_postman)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var jsonData = pm.response.json();",
+									"pm.environment.set(\"accessToken\", jsonData.access);",
+									"pm.test(\"Response contains access token\", function () {",
+									"    pm.expect(jsonData).to.have.property('access');",
+									"});",
+									"pm.test(\"Response contains refresh token\", function () {",
+									"    pm.expect(jsonData).to.have.property('refresh');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{registeredUsername}}\",\n  \"password\": \"testpass123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/token/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"token",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "01 - DietType (Base for other tests)",
+			"item": [
+				{
+					"name": "Create Base Test DietType",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"var jsonData = pm.response.json();",
+									"pm.environment.set(\"baseDietTypeId\", jsonData.id);",
+									"pm.environment.set(\"baseDietTypeName\", jsonData.name);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Base Test Diet (Postman)\",\n  \"description\": \"Base Test Diet Description for Postman collection\",\n  \"is_restricted\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/diet-types/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"diet-types",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "02 - DietType CRUD",
+			"item": [
+				{
+					"name": "Create DietType (CRUD)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"var jsonData = pm.response.json();",
+									"pm.environment.set(\"dietTypeId_crud\", jsonData.id);",
+									"pm.environment.set(\"dietTypeName_crud\", jsonData.name);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Low Carb (Postman CRUD)\",\n  \"description\": \"Low carbohydrate diet for Postman test\",\n  \"is_restricted\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/diet-types/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"diet-types",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get DietType by ID (CRUD)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Name matches created diet type\", function () {",
+									"    pm.expect(pm.response.json().name).to.eql(pm.environment.get(\"dietTypeName_crud\"));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/diet-types/{{dietTypeId_crud}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"diet-types",
+								"{{dietTypeId_crud}}",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update DietType (CRUD)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Можно получить значение из переменной окружения, установленной в pre-request script,",
+									"// или просто использовать ожидаемую строку напрямую для сравнения.",
+									"var expectedUpdatedName = pm.environment.get(\"dietTypeName_crud_updated_for_body\"); ",
+									"// или: var expectedUpdatedName = \"Very Low Carb (Postman CRUD Updated)\";",
+									"",
+									"",
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Name matches updated diet type\", function () {",
+									"    pm.expect(pm.response.json().name).to.eql(expectedUpdatedName);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var updatedName = \"Very Low Carb (Postman CRUD Updated)\";\r",
+									"pm.environment.set(\"dietTypeName_crud_updated_for_body\", updatedName); \r",
+									"// Используем другое имя для переменной, чтобы явно видеть, что она для тела запроса\r",
+									"// и чтобы не было путаницы с переменной, используемой в тестовом скрипте для сравнения,\r",
+									"// хотя можно использовать и то же самое, если быть аккуратным."
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"{{dietTypeName_crud_updated_for_body}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/diet-types/{{dietTypeId_crud}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"diet-types",
+								"{{dietTypeId_crud}}",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete DietType (CRUD)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 204 No Content\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/diet-types/{{dietTypeId_crud}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"diet-types",
+								"{{dietTypeId_crud}}",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "03 - MealPlan CRUD",
+			"item": [
+				{
+					"name": "Create MealPlan (CRUD)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"var jsonData = pm.response.json();",
+									"pm.environment.set(\"mealPlanId_crud\", jsonData.id);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": {{registeredUserId}}, \n  \"duration\": 7,\n  \"total_price\": \"100.0\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/meal-plans/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"meal-plans",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get MealPlan by ID (CRUD)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"ID matches created meal plan\", function () {",
+									"    pm.expect(pm.response.json().id).to.eql(parseInt(pm.environment.get(\"mealPlanId_crud\")));",
+									"});",
+									"pm.test(\"User ID matches registered user ID\", function () {",
+									"    pm.expect(pm.response.json().user_id).to.eql(parseInt(pm.environment.get(\"registeredUserId\")));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/meal-plans/{{mealPlanId_crud}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"meal-plans",
+								"{{mealPlanId_crud}}",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update MealPlan (CRUD)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Total price matches updated value\", function () {",
+									"    pm.expect(parseFloat(pm.response.json().total_price)).to.eql(120.5);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"total_price\": \"120.5\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/meal-plans/{{mealPlanId_crud}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"meal-plans",
+								"{{mealPlanId_crud}}",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete MealPlan (CRUD)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 204 No Content\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/meal-plans/{{mealPlanId_crud}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"meal-plans",
+								"{{mealPlanId_crud}}",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "04 - Meal CRUD",
+			"item": [
+				{
+					"name": "Create Meal (CRUD)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"var jsonData = pm.response.json();",
+									"pm.environment.set(\"mealId_crud\", jsonData.id);",
+									"pm.environment.set(\"mealName_crud\", jsonData.name);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Postman Breakfast\",\n  \"price\": \"10.50\",\n  \"description\": \"Healthy breakfast for Postman test\",\n  \"diet_type_id\": {{baseDietTypeId}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/meals/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"meals",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Meal by ID (CRUD)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Name matches created meal\", function () {",
+									"    pm.expect(pm.response.json().name).to.eql(pm.environment.get(\"mealName_crud\"));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/meals/{{mealId_crud}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"meals",
+								"{{mealId_crud}}",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Meal (CRUD)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Price matches updated value\", function () {",
+									"    pm.expect(parseFloat(pm.response.json().price)).to.eql(12.75);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"price\": \"12.75\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/meals/{{mealId_crud}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"meals",
+								"{{mealId_crud}}",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Meal (CRUD)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 204 No Content\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/meals/{{mealId_crud}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"meals",
+								"{{mealId_crud}}",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "05 - Ingredient CRUD",
+			"item": [
+				{
+					"name": "Create Ingredient (CRUD)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"var jsonData = pm.response.json();",
+									"pm.environment.set(\"ingredientId_crud\", jsonData.id);",
+									"pm.environment.set(\"ingredientName_crud\", jsonData.name);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Postman Eggs\",\n  \"price_per_unit\": \"0.55\",\n  \"unit\": \"piece\",\n  \"store_name\": \"Postman Local Market\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/ingredients/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"ingredients",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Ingredient by ID (CRUD)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Name matches created ingredient\", function () {",
+									"    pm.expect(pm.response.json().name).to.eql(pm.environment.get(\"ingredientName_crud\"));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/ingredients/{{ingredientId_crud}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"ingredients",
+								"{{ingredientId_crud}}",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Ingredient (CRUD)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Price per unit matches updated value\", function () {",
+									"    pm.expect(parseFloat(pm.response.json().price_per_unit)).to.eql(0.65);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"price_per_unit\": \"0.65\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/ingredients/{{ingredientId_crud}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"ingredients",
+								"{{ingredientId_crud}}",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Ingredient (CRUD)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 204 No Content\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/ingredients/{{ingredientId_crud}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"ingredients",
+								"{{ingredientId_crud}}",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "06 - Favorite CRUD",
+			"item": [
+				{
+					"name": "Create Meal for Favorite Test",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"var jsonData = pm.response.json();",
+									"pm.environment.set(\"mealForFavoriteId\", jsonData.id);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Postman Test Meal for Favorite\",\n  \"price\": \"10.00\",\n  \"description\": \"Test Description for Favorite (Postman)\",\n  \"diet_type_id\": {{baseDietTypeId}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/meals/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"meals",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Favorite (CRUD)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"var jsonData = pm.response.json();",
+									"pm.environment.set(\"favoriteId_crud\", jsonData.id);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": {{registeredUserId}},\n  \"meal_id\": {{mealForFavoriteId}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/favorites/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"favorites",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Favorite by ID (CRUD)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"User ID matches created favorite\", function () {",
+									"    pm.expect(pm.response.json().user_id).to.eql(parseInt(pm.environment.get(\"registeredUserId\")));",
+									"});",
+									"pm.test(\"Meal ID matches created favorite\", function () {",
+									"    pm.expect(pm.response.json().meal_id).to.eql(parseInt(pm.environment.get(\"mealForFavoriteId\")));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/favorites/{{favoriteId_crud}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"favorites",
+								"{{favoriteId_crud}}",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Favorite (CRUD)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 204 No Content\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/favorites/{{favoriteId_crud}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"favorites",
+								"{{favoriteId_crud}}",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Meal for Favorite Test (Cleanup)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Expect 204 if deleted, or 404 if it was already cascade-deleted or never existed properly",
+									"pm.test(\"Status code is 204 No Content or 404 Not Found\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([204, 404]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/meals/{{mealForFavoriteId}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"meals",
+								"{{mealForFavoriteId}}",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "07 - User Actions",
+			"item": [
+				{
+					"name": "Get User Details",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Username matches registered user\", function () {",
+									"    pm.expect(pm.response.json().username).to.eql(pm.environment.get(\"registeredUsername\"));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/users/{{registeredUserId}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{registeredUserId}}",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update User Details",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var jsonData = pm.response.json();",
+									"pm.test(\"Weight is updated\", function () {",
+									"    pm.expect(parseFloat(jsonData.weight)).to.eql(75.5);",
+									"});",
+									"pm.test(\"Age is updated\", function () {",
+									"    pm.expect(jsonData.age).to.eql(30);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"weight\": 75.5,\n  \"age\": 30,\n  \"email\": \"testpostman_updated@example.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/{{registeredUserId}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{registeredUserId}}",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Password - Correct",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Password is valid\", function () {",
+									"    pm.expect(pm.response.json().is_valid).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"password\": \"testpass123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/{{registeredUserId}}/verify_password/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{registeredUserId}}",
+								"verify_password",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Password - Incorrect",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Password is not valid\", function () {",
+									"    pm.expect(pm.response.json().is_valid).to.be.false;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"password\": \"wrongtestpass123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/{{registeredUserId}}/verify_password/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{registeredUserId}}",
+								"verify_password",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "99 - Cleanup",
+			"item": [
+				{
+					"name": "Delete Base Test DietType",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Expect 204 if deleted, or 404 if it was already cascade-deleted or never existed properly",
+									"pm.test(\"Status code is 204 No Content or 404 Not Found\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([204, 404]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/diet-types/{{baseDietTypeId}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"diet-types",
+								"{{baseDietTypeId}}",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Registered User (testuser_postman)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 204 No Content\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});",
+									"// Clear environment variables related to this test run",
+									"pm.environment.unset(\"accessToken\");",
+									"pm.environment.unset(\"registeredUserId\");",
+									"pm.environment.unset(\"registeredUsername\");",
+									"pm.environment.unset(\"baseDietTypeId\");",
+									"pm.environment.unset(\"baseDietTypeName\");",
+									"pm.environment.unset(\"dietTypeId_crud\");",
+									"pm.environment.unset(\"dietTypeName_crud\");",
+									"pm.environment.unset(\"dietTypeName_crud_updated\");",
+									"pm.environment.unset(\"mealPlanId_crud\");",
+									"pm.environment.unset(\"mealId_crud\");",
+									"pm.environment.unset(\"mealName_crud\");",
+									"pm.environment.unset(\"ingredientId_crud\");",
+									"pm.environment.unset(\"ingredientName_crud\");",
+									"pm.environment.unset(\"mealForFavoriteId\");",
+									"pm.environment.unset(\"favoriteId_crud\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/users/{{registeredUserId}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{registeredUserId}}",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		}
+	]
+}
